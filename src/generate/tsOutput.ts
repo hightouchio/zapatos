@@ -58,6 +58,13 @@ function indentAll(level: number, s: string) {
   return s.replace(/^/gm, ' '.repeat(level));
 }
 
+const sortTables = (tables: Relation[]) => tables.slice().sort((t1, t2) => {
+  if (t1.schema !== t2.schema) {
+    return t1.schema < t2.schema ? -1 : +1;
+  }
+  return t1.name < t2.name ? -1 : +1;
+});
+
 export const tsForConfig = async (config: CompleteConfig, debug: (s: string) => void) => {
   let querySeq = 0;
   const
@@ -109,7 +116,7 @@ export const tsForConfig = async (config: CompleteConfig, debug: (s: string) => 
     ),
     schemaDefs = schemaData.map(r => r.schemaDef),
     schemaTables = schemaData.map(r => r.tables),
-    allTables = ([] as Relation[]).concat(...schemaTables),
+    allTables = sortTables(([] as Relation[]).concat(...schemaTables)),
     hasCustomTypes = Object.keys(customTypes).length > 0,
     ts = header() + declareModule('zapatos/schema',
       `\nimport type * as db from 'zapatos/db';\n` +

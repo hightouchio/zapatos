@@ -18,6 +18,17 @@ export interface Relation {
   insertable: boolean;
 }
 
+export interface Column {
+  column: string;
+  isNullable: boolean;
+  isGenerated: boolean;
+  hasDefault: boolean;
+  defaultValue: unknown;
+  udtName: string;
+  domainName: string | null;
+  description: string | null;
+}
+
 export const relationsInSchema = async (schemaName: string, queryFn: (q: pg.QueryConfig) => Promise<pg.QueryResult<any>>): Promise<Relation[]> => {
   const { rows } = await queryFn({
     text: `
@@ -47,7 +58,7 @@ export const relationsInSchema = async (schemaName: string, queryFn: (q: pg.Quer
   return rows;
 };
 
-const columnsForRelation = async (rel: Relation, schemaName: string, queryFn: (q: pg.QueryConfig) => Promise<pg.QueryResult<any>>) => {
+const columnsForRelation = async (rel: Relation, schemaName: string, queryFn: (q: pg.QueryConfig) => Promise<pg.QueryResult<any>>): Promise<Column[]> => {
   const { rows } = await queryFn({
     text:
       rel.type === 'mview'
@@ -110,6 +121,7 @@ export const definitionForRelationInSchema = async (
     insertables: string[] = [],
     updatables: string[] = [];
 
+  rows.sort((r1, r2) => r1.column < r2.column ? -1 : +1);
   rows.forEach(row => {
     const { column, isGenerated, isNullable, hasDefault, udtName, domainName } = row;
     let
@@ -288,7 +300,7 @@ export type AllMaterializedViews = ${schemaMappedArray(schemas, 'AllMaterialized
 export type AllTablesAndViews = ${schemaMappedArray(schemas, 'AllTablesAndViews')};
 `;
 
-const createColumnDoc = (config: CompleteConfig, schemaName: string, rel: Relation, columnDetails: Record<string, unknown>) => {
+const createColumnDoc = (config: CompleteConfig, schemaName: string, rel: Relation, columnDetails: Column) => {
   if (!config.schemaJSDoc) return '';
 
   const
